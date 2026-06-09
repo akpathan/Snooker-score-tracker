@@ -3,511 +3,87 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
     <title>Snooker Multi-Player Tracker</title>
-    <style>
-      :root {
-        --bg-gradient: linear-gradient(135deg, #0f172a 0%, #020617 100%);
-        --card-bg: rgba(30, 41, 59, 0.7);
-        --card-border: rgba(255, 255, 255, 0.08);
-        --text-main: #f8fafc;
-        --text-muted: #94a3b8;
-        --accent-green: #10b981;
-        --accent-glow: rgba(16, 185, 129, 0.3);
-        --gold: #fbbf24;
-        --danger: #ef4444;
-
-        /* Ball Colors */
-        --ball-red: #dc2626;
-        --ball-yellow: #facc15;
-        --ball-green: #16a34a;
-        --ball-brown: #92400e;
-        --ball-blue: #2563eb;
-        --ball-pink: #ec4899;
-        --ball-black: #1e293b;
-      }
-
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        user-select: none;
-      }
-
-      body {
-        background: var(--bg-gradient);
-        color: var(--text-main);
-        min-height: 100vh;
-        padding: 15px;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-      }
-
-      .container {
-        width: 100%;
-        max-width: 800px;
-        margin: 0 auto;
-      }
-
-      .panel {
-        background: var(--card-bg);
-        backdrop-filter: blur(12px);
-        border: 1px solid var(--card-border);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        margin-bottom: 15px;
-      }
-
-      h2 {
-        font-size: 1.25rem;
-        margin-bottom: 15px;
-        text-align: center;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        color: var(--text-main);
-      }
-
-      /* Setup Screen View */
-      #setupScreen {
-        max-width: 450px;
-        margin: 40px auto;
-      }
-
-      .form-group {
-        margin-bottom: 15px;
-      }
-
-      label {
-        display: block;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        margin-bottom: 5px;
-        font-weight: 600;
-      }
-
-      select,
-      input[type="text"] {
-        width: 100%;
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid var(--card-border);
-        color: var(--text-main);
-        padding: 10px 12px;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        outline: none;
-      }
-
-      select:focus,
-      input[type="text"]:focus {
-        border-color: var(--accent-green);
-      }
-
-      #namesContainer {
-        max-height: 220px;
-        overflow-y: auto;
-        padding-right: 5px;
-      }
-
-      /* Leaderboard / Leader Standings Row */
-      .scoreboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-        gap: 10px;
-      }
-
-      .player-box {
-        background: rgba(15, 23, 42, 0.4);
-        border: 1px solid var(--card-border);
-        border-radius: 10px;
-        padding: 12px;
-        text-align: center;
-        transition: all 0.2s ease;
-        position: relative;
-        cursor: pointer;
-      }
-
-      .player-box.active {
-        background: rgba(16, 185, 129, 0.08);
-        border-color: var(--accent-green);
-        box-shadow: 0 0 12px var(--accent-glow);
-      }
-
-      .player-box.active::after {
-        content: "ON TURN";
-        position: absolute;
-        bottom: -6px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--accent-green);
-        font-size: 0.6rem;
-        font-weight: 800;
-        padding: 1px 6px;
-        border-radius: 10px;
-        letter-spacing: 0.5px;
-      }
-
-      .p-name {
-        font-size: 0.9rem;
-        font-weight: 700;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .p-score {
-        font-size: 1.8rem;
-        font-weight: 800;
-        font-family: monospace;
-        color: var(--gold);
-        margin: 2px 0;
-      }
-
-      .p-meta {
-        font-size: 0.7rem;
-        color: var(--text-muted);
-      }
-
-      /* Real-time Match Ticker Info */
-      .ticker-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        text-align: center;
-      }
-
-      .ticker-item {
-        background: rgba(0, 0, 0, 0.2);
-        padding: 8px;
-        border-radius: 8px;
-      }
-
-      .ticker-label {
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        text-transform: uppercase;
-      }
-
-      .ticker-val {
-        font-size: 1.1rem;
-        font-weight: 700;
-      }
-
-      /* Ball Entry Interface */
-      .ball-flex {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 10px;
-        padding: 10px 0;
-      }
-
-      .ball-btn {
-        width: 54px;
-        height: 54px;
-        border-radius: 50%;
-        border: none;
-        cursor: pointer;
-        font-weight: 800;
-        font-size: 0.9rem;
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow:
-          inset -4px -4px 12px rgba(0, 0, 0, 0.5),
-          radial-gradient(
-            circle at 18px 18px,
-            rgba(255, 255, 255, 0.4),
-            transparent
-          ),
-          0 4px 8px rgba(0, 0, 0, 0.3);
-        transition:
-          transform 0.1s ease,
-          filter 0.2s ease;
-      }
-
-      .ball-btn:active {
-        transform: scale(0.9);
-      }
-      .ball-btn:disabled {
-        filter: grayscale(0.8) opacity(0.15);
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      .ball-1 {
-        background: var(--ball-red);
-      }
-      .ball-2 {
-        background: var(--ball-yellow);
-        color: #111;
-      }
-      .ball-3 {
-        background: var(--ball-green);
-      }
-      .ball-4 {
-        background: var(--ball-brown);
-      }
-      .ball-5 {
-        background: var(--ball-blue);
-      }
-      .ball-6 {
-        background: var(--ball-pink);
-      }
-      .ball-7 {
-        background: var(--ball-black);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-
-      /* Utility System Control Configurations */
-      .btn-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-
-      .foul-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6px;
-      }
-
-      .btn {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--card-border);
-        color: var(--text-main);
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        cursor: pointer;
-        text-align: center;
-        transition: background 0.2s;
-      }
-
-      .btn:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.12);
-      }
-      .btn-danger {
-        background: rgba(239, 68, 68, 0.15);
-        border-color: rgba(239, 68, 68, 0.2);
-        color: #fca5a5;
-      }
-      .btn-success {
-        background: rgba(16, 185, 129, 0.15);
-        border-color: rgba(16, 185, 129, 0.2);
-        color: #a7f3d0;
-      }
-
-      /* Modernized Beautiful Frame Log Stream */
-      .history-box {
-        max-height: 180px;
-        overflow-y: auto;
-        background: rgba(15, 23, 42, 0.5);
-        border: 1px solid var(--card-border);
-        border-radius: 12px;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .history-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 8px 12px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.02);
-        border-left: 4px solid var(--text-muted);
-        animation: fadeIn 0.2s ease-out;
-      }
-
-      .history-item .log-left {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .history-item .time-tag {
-        font-size: 0.65rem;
-        background: rgba(0, 0, 0, 0.3);
-        color: var(--text-muted);
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-family: monospace;
-      }
-
-      .history-item .log-msg {
-        font-size: 0.85rem;
-        font-weight: 500;
-      }
-
-      .history-item .badge {
-        font-size: 0.75rem;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 20px;
-      }
-
-      /* Log Item Variant Styles */
-      .history-item.type-pot {
-        border-left-color: var(--accent-green);
-        background: rgba(16, 185, 129, 0.04);
-      }
-      .history-item.type-pot .badge {
-        background: rgba(16, 185, 129, 0.2);
-        color: #34d399;
-      }
-
-      .history-item.type-foul {
-        border-left-color: var(--danger);
-        background: rgba(239, 68, 68, 0.05);
-      }
-      .history-item.type-foul .badge {
-        background: rgba(239, 68, 68, 0.25);
-        color: #fca5a5;
-      }
-
-      .history-item.type-turn {
-        border-left-color: var(--gold);
-        background: rgba(251, 191, 36, 0.04);
-      }
-      .history-item.type-turn .badge {
-        background: rgba(251, 191, 36, 0.2);
-        color: #fcd34d;
-      }
-
-      .history-item.type-system {
-        border-left-color: #38bdf8;
-        background: rgba(56, 189, 248, 0.04);
-      }
-      .history-item.type-system .badge {
-        background: rgba(56, 189, 248, 0.2);
-        color: #7dd3fc;
-      }
-
-      .footerPanel {
-        padding: 12px;
-        text-align: center;
-        font-size: 0.8rem;
-        font-weight: 500;
-        letter-spacing: 0.5px;
-        color: var(--text-muted);
-        margin-top: 20px;
-      }
-
-      .footerPanel h3 {
-        color: var(--text-muted);
-        font-weight: 600;
-        font-size: 18px;
-      }
-
-      /* Toast Warning Alerts */
-      .toast {
-        position: fixed;
-        bottom: 15px;
-        left: 50%;
-        transform: translateX(-50%) translateY(100px);
-        background: #1e293b;
-        border-left: 4px solid var(--gold);
-        color: #fff;
-        padding: 10px 20px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        transition: transform 0.3s ease;
-        z-index: 1000;
-        pointer-events: none;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-      }
-      .toast.show {
-        transform: translateX(-50%) translateY(0);
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(-3px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .hidden {
-        display: none !important;
-      }
-    </style>
   </head>
   <body>
     <div class="container">
-      <div id="setupScreen" class="panel">
-        <h2>Snooker score tracker</h2>
+      <main id="setupScreen" class="panel panel-setup">
+        <header class="setup-header">
+          <h2>Snooker Score Tracker</h2>
+          <p class="setup-subtitle">
+            Configure players and table layout to begin
+          </p>
+        </header>
+
         <div class="form-group">
           <label for="playerCount">Number of Contestants (Max 6)</label>
-          <select id="playerCount" onchange="app.generatePlayerInputRows()">
-            <option value="2">2 Players</option>
-            <option value="3">3 Players</option>
-            <option value="4">4 Players</option>
-            <option value="5">5 Players</option>
-            <option value="6">6 Players</option>
-          </select>
+          <div class="select-wrapper">
+            <select id="playerCount" onchange="app.generatePlayerInputRows()">
+              <option value="2">2 Players</option>
+              <option value="3">3 Players</option>
+              <option value="4">4 Players</option>
+              <option value="5">5 Players</option>
+              <option value="6">6 Players</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
           <label for="redCount">Starting Reds Pack</label>
-          <select id="redCount">
-            <option value="15">15 Reds (Standard 147)</option>
-            <option value="10">10 Reds</option>
-            <option value="6">6 Reds</option>
-          </select>
+          <div class="select-wrapper">
+            <select id="redCount">
+              <option value="15">15 Reds (Standard 147)</option>
+              <option value="10">10 Reds</option>
+              <option value="6">6 Reds</option>
+            </select>
+          </div>
         </div>
-        <div id="namesContainer"></div>
+
+        <div id="namesContainer" class="names-list"></div>
+
         <button
-          class="btn btn-success"
-          style="width: 100%; margin-top: 10px; padding: 12px"
+          class="btn btn-action btn-success"
+          style="width: 100%; margin-top: 10px"
           onclick="app.startMatch()"
         >
-          Start game
+          Start Match
         </button>
-        <div class="panel footerPanel"><h3>Made by AK</h3></div>
-      </div>
+
+        <footer class="panel footer-panel">
+          <h3>Made by AK</h3>
+        </footer>
+      </main>
 
       <div id="matchScreen" class="hidden">
-        <div class="panel">
+        <section class="panel panel-flat">
           <div class="scoreboard-grid" id="playersScoreboardGrid"></div>
+        </section>
+
+        <div class="panel status-banner" id="lblSnookerCalculator">
+          Frame Status Checking...
         </div>
 
-        <div class="panel ticker-row">
-          <div class="ticker-item">
+        <section class="ticker-row">
+          <div class="panel ticker-item text-center">
             <div class="ticker-label">Current Break</div>
-            <div class="ticker-val" id="lblBreak" style="color: var(--gold)">
-              0
-            </div>
+            <div class="ticker-val val-break" id="lblBreak">0</div>
           </div>
-          <div class="ticker-item">
+          <div class="panel ticker-item text-center">
             <div class="ticker-label">Points Remaining</div>
-            <div
-              class="ticker-val"
-              id="lblRemaining"
-              style="color: var(--accent-green)"
-            >
-              147
-            </div>
+            <div class="ticker-val val-remaining" id="lblRemaining">147</div>
           </div>
-        </div>
+        </section>
 
-        <div class="panel" style="text-align: center">
-          <div
-            class="ticker-label"
-            id="lblTargetPhase"
-            style="margin-bottom: 5px; font-weight: 700"
-          >
+        <section class="panel table-visualizer">
+          <div class="visualizer-header">
+            <span class="visualizer-title">Live Table Inventory</span>
+          </div>
+          <div class="asset-pool" id="tableAssetPool"></div>
+        </section>
+
+        <section class="panel target-control-panel text-center">
+          <div class="ticker-label target-header" id="lblTargetPhase">
             Target: RED
           </div>
           <div class="ball-flex">
@@ -533,9 +109,9 @@
               7
             </button>
           </div>
-        </div>
+        </section>
 
-        <div class="panel">
+        <section class="panel controls-panel">
           <div class="btn-grid">
             <button class="btn btn-success" onclick="app.endTurn()">
               End Break Turn
@@ -545,350 +121,55 @@
             </button>
           </div>
 
-          <div style="margin: 12px 0 6px 0" class="ticker-label">
-            Foul Penalty Assessment (Deducted from offending player)
+          <div class="foul-control-wrapper">
+            <div class="ticker-label foul-heading">
+              Foul Penalty Options
+              <span class="foul-subheading"
+                >(Deducted from active, added to opponents)</span
+              >
+            </div>
+            <div class="foul-strategy-row">
+              <button
+                class="strategy-btn selected"
+                id="btnFoulPass"
+                onclick="app.setFoulStrategy('pass')"
+              >
+                PASS TURN TO NEXT
+              </button>
+              <button
+                class="strategy-btn"
+                id="btnFoulStay"
+                onclick="app.setFoulStrategy('stay')"
+              >
+                STAY ON TURN (PLAY AGAIN)
+              </button>
+            </div>
+            <div class="foul-grid">
+              <button class="btn btn-foul" onclick="app.foul(4)">+4 Pts</button>
+              <button class="btn btn-foul" onclick="app.foul(5)">+5 Pts</button>
+              <button class="btn btn-foul" onclick="app.foul(6)">+6 Pts</button>
+              <button class="btn btn-foul" onclick="app.foul(7)">+7 Pts</button>
+            </div>
           </div>
-          <div class="foul-grid">
-            <button class="btn btn-danger" onclick="app.foul(4)">-4 Pts</button>
-            <button class="btn btn-danger" onclick="app.foul(5)">-5 Pts</button>
-            <button class="btn btn-danger" onclick="app.foul(6)">-6 Pts</button>
-            <button class="btn btn-danger" onclick="app.foul(7)">-7 Pts</button>
-          </div>
-        </div>
+        </section>
 
-        <div class="panel">
-          <div class="ticker-label" style="margin-bottom: 8px">
-            Live Frame Log Stream
-          </div>
+        <section class="panel log-stream-panel">
+          <div class="ticker-label log-title">Live Frame Log Stream</div>
           <div class="history-box" id="historyFeed"></div>
-          <button
-            class="btn"
-            style="
-              width: 100%;
-              margin-top: 12px;
-              font-size: 0.75rem;
-              padding: 6px;
-            "
-            onclick="app.exitToSetup()"
-          >
+
+          <button class="btn btn-exit-session" onclick="app.exitToSetup()">
             Reset & Exit Match
           </button>
-        </div>
-        <div class="panel footerPanel"><h3>Made by AK</h3></div>
+        </section>
+
+        <footer class="panel footer-panel">
+          <h3>Made by AK</h3>
+        </footer>
       </div>
     </div>
 
     <div class="toast" id="toast">Rule Infraction Detected!</div>
 
-    <script>
-      class SimpleSnookerApp {
-        constructor() {
-          this.players = [];
-          this.activeIndex = 0;
-          this.currentBreak = 0;
-          this.redsLeft = 15;
-          this.phase = "RED"; // 'RED', 'COLOR', 'CLEARANCE'
-          this.clearanceOrder = [2, 3, 4, 5, 6, 7];
-          this.history = [];
-          this.undoStack = [];
-        }
-
-        init() {
-          this.generatePlayerInputRows();
-        }
-
-        generatePlayerInputRows() {
-          const count = parseInt(document.getElementById("playerCount").value);
-          const container = document.getElementById("namesContainer");
-          container.innerHTML = "";
-          for (let i = 1; i <= count; i++) {
-            container.innerHTML += `
-                        <div class="form-group">
-                            <label>Player ${i} Name</label>
-                            <input type="text" id="pName${i}" value="Player ${i}" maxlength="12">
-                        </div>
-                    `;
-          }
-        }
-
-        startMatch() {
-          const count = parseInt(document.getElementById("playerCount").value);
-          this.redsLeft = parseInt(document.getElementById("redCount").value);
-          this.players = [];
-
-          for (let i = 1; i <= count; i++) {
-            const nameInput = document.getElementById(`pName${i}`);
-            this.players.push({
-              name: nameInput.value.trim() || `Player ${i}`,
-              score: 0,
-              hiBreak: 0,
-            });
-          }
-
-          this.activeIndex = 0;
-          this.currentBreak = 0;
-          this.phase = "RED";
-          this.clearanceOrder = [2, 3, 4, 5, 6, 7];
-          this.history = [];
-          this.undoStack = [];
-
-          document.getElementById("setupScreen").classList.add("hidden");
-          document.getElementById("matchScreen").classList.remove("hidden");
-
-          this.log("Match initialised", "system", "START");
-          this.evaluateRulesState();
-          this.render();
-        }
-
-        exitToSetup() {
-          if (confirm("Abandon tracking session and return to registration?")) {
-            document.getElementById("matchScreen").classList.add("hidden");
-            document.getElementById("setupScreen").classList.remove("hidden");
-          }
-        }
-
-        saveSnapshot() {
-          const snapshot = {
-            players: JSON.parse(JSON.stringify(this.players)),
-            activeIndex: this.activeIndex,
-            currentBreak: this.currentBreak,
-            redsLeft: this.redsLeft,
-            phase: this.phase,
-            clearanceOrder: [...this.clearanceOrder],
-            history: JSON.parse(JSON.stringify(this.history)),
-          };
-          this.undoStack.push(snapshot);
-          if (this.undoStack.length > 30) this.undoStack.shift();
-        }
-
-        undo() {
-          if (this.undoStack.length === 0) {
-            this.triggerToast("No actions left on stack to undo.");
-            return;
-          }
-          const previous = this.undoStack.pop();
-          this.players = previous.players;
-          this.activeIndex = previous.activeIndex;
-          this.currentBreak = previous.currentBreak;
-          this.redsLeft = previous.redsLeft;
-          this.phase = previous.phase;
-          this.clearanceOrder = previous.clearanceOrder;
-          this.history = previous.history;
-
-          this.evaluateRulesState();
-          this.render();
-        }
-
-        potBall(val) {
-          if (this.phase === "RED" && val !== 1) {
-            this.triggerToast("Rule Error: Target must be a RED ball.");
-            return;
-          }
-          if (this.phase === "COLOR" && val === 1) {
-            this.triggerToast("Rule Error: Target must be a COLOR ball.");
-            return;
-          }
-          if (this.phase === "CLEARANCE" && val !== this.clearanceOrder[0]) {
-            this.triggerToast(
-              "Rule Error: Colors must be cleared in order sequence.",
-            );
-            return;
-          }
-
-          this.saveSnapshot();
-          const active = this.players[this.activeIndex];
-
-          active.score += val;
-          this.currentBreak += val;
-          if (this.currentBreak > active.hiBreak)
-            active.hiBreak = this.currentBreak;
-
-          const mappedNames = {
-            1: "Red",
-            2: "Yellow",
-            3: "Green",
-            4: "Brown",
-            5: "Blue",
-            6: "Pink",
-            7: "Black",
-          };
-          this.log(
-            `${active.name} potted ${mappedNames[val]}`,
-            "pot",
-            `+${val}`,
-          );
-
-          // Phase Transition Matrix Processing
-          if (this.phase === "RED") {
-            this.redsLeft--;
-            this.phase = "COLOR";
-          } else if (this.phase === "COLOR") {
-            this.phase = this.redsLeft > 0 ? "RED" : "CLEARANCE";
-          } else if (this.phase === "CLEARANCE") {
-            this.clearanceOrder.shift();
-          }
-
-          this.evaluateRulesState();
-          this.render();
-        }
-
-        endTurn() {
-          this.saveSnapshot();
-          const active = this.players[this.activeIndex];
-          this.log(
-            `${active.name} break ended`,
-            "turn",
-            `Break: ${this.currentBreak}`,
-          );
-
-          if (this.phase === "COLOR") {
-            this.phase = this.redsLeft > 0 ? "RED" : "CLEARANCE";
-          }
-
-          this.currentBreak = 0;
-          this.activeIndex = (this.activeIndex + 1) % this.players.length;
-
-          this.evaluateRulesState();
-          this.render();
-        }
-
-        foul(penaltyValue) {
-          this.saveSnapshot();
-          const active = this.players[this.activeIndex];
-
-          // Subtract foul penalty points directly from offending player's score
-          active.score -= penaltyValue;
-
-          this.log(`${active.name} committed foul`, "foul", `-${penaltyValue}`);
-
-          if (this.phase === "COLOR") {
-            this.phase = this.redsLeft > 0 ? "RED" : "CLEARANCE";
-          }
-
-          this.currentBreak = 0;
-          this.activeIndex = (this.activeIndex + 1) % this.players.length; // Pass turn configuration forward
-
-          this.evaluateRulesState();
-          this.render();
-        }
-
-        evaluateRulesState() {
-          let totalPointsRemaining = 0;
-          if (this.redsLeft > 0) {
-            totalPointsRemaining += this.redsLeft * 8 + 27;
-            if (this.phase === "COLOR") totalPointsRemaining += 7;
-          } else {
-            this.clearanceOrder.forEach((c) => (totalPointsRemaining += c));
-            if (this.phase === "COLOR") totalPointsRemaining += 7;
-          }
-
-          document.getElementById("lblRemaining").innerText =
-            totalPointsRemaining;
-
-          const targetLabel = document.getElementById("lblTargetPhase");
-          if (this.phase === "RED") {
-            targetLabel.innerText = "Target Phase: RED";
-            targetLabel.style.color = "var(--ball-red)";
-          } else if (this.phase === "COLOR") {
-            targetLabel.innerText = "Target Phase: ANY COLOR";
-            targetLabel.style.color = "var(--gold)";
-          } else {
-            const mappedNames = {
-              2: "YELLOW",
-              3: "GREEN",
-              4: "BROWN",
-              5: "BLUE",
-              6: "PINK",
-              7: "BLACK",
-            };
-            const upNextVal = this.clearanceOrder[0] || 7;
-            targetLabel.innerText = `Target Phase Sequence: ${mappedNames[upNextVal]}`;
-            targetLabel.style.color = "var(--text-main)";
-          }
-
-          for (let i = 1; i <= 7; i++) {
-            const btn = document.getElementById(`b${i}`);
-            if (this.phase === "RED") btn.disabled = i !== 1;
-            else if (this.phase === "COLOR") btn.disabled = i === 1;
-            else if (this.phase === "CLEARANCE")
-              btn.disabled = i !== this.clearanceOrder[0];
-          }
-        }
-
-        log(msg, type = "system", badgeText = "") {
-          const now = new Date();
-          const timeStr = now.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          });
-
-          this.history.unshift({
-            time: timeStr,
-            message: msg,
-            type: type,
-            badge: badgeText,
-          });
-
-          if (this.history.length > 30) this.history.pop();
-        }
-
-        triggerToast(msg) {
-          const t = document.getElementById("toast");
-          t.innerText = msg;
-          t.classList.add("show");
-          setTimeout(() => t.classList.remove("show"), 2500);
-        }
-
-        render() {
-          const grid = document.getElementById("playersScoreboardGrid");
-          grid.innerHTML = "";
-
-          this.players.forEach((p, idx) => {
-            const isActive = idx === this.activeIndex;
-            grid.innerHTML += `
-                        <div class="player-box ${isActive ? "active" : ""}" onclick="app.selectPlayerIndexDirectly(${idx})">
-                            <div class="p-name">${p.name}</div>
-                            <div class="p-score">${p.score}</div>
-                            <div class="p-meta">Hi-Break: ${p.hiBreak}</div>
-                        </div>
-                    `;
-          });
-
-          document.getElementById("lblBreak").innerText = this.currentBreak;
-
-          // Modernized Stream UI Logger rendering
-          const feed = document.getElementById("historyFeed");
-          feed.innerHTML = "";
-
-          this.history.forEach((item) => {
-            feed.innerHTML += `
-                        <div class="history-item type-${item.type}">
-                            <div class="log-left">
-                                <span class="time-tag">${item.time}</span>
-                                <span class="log-msg">${item.message}</span>
-                            </div>
-                            ${item.badge ? `<span class="badge">${item.badge}</span>` : ""}
-                        </div>
-                    `;
-          });
-        }
-
-        selectPlayerIndexDirectly(idx) {
-          if (this.currentBreak > 0) {
-            this.triggerToast(
-              "Cannot swap current turn active players mid-break series.",
-            );
-            return;
-          }
-          this.activeIndex = idx;
-          this.evaluateRulesState();
-          this.render();
-        }
-      }
-
-      const app = new SimpleSnookerApp();
-      window.addEventListener("DOMContentLoaded", () => app.init());
-    </script>
+    <script src="main.js"></script>
   </body>
 </html>
