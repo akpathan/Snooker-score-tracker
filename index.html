@@ -4,30 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="style.css" />
-    <title>Snooker Multi-Player Tracker</title>
+    <title>Snooker 2vs2 Team Tracker</title>
   </head>
   <body>
     <div class="container">
       <main id="setupScreen" class="panel panel-setup">
         <header class="setup-header">
-          <h2>Snooker Score Tracker</h2>
-          <p class="setup-subtitle">
-            Configure players and table layout to begin
-          </p>
+          <h2>Snooker 2vs2 Tracker</h2>
+          <p class="setup-subtitle">Configure Teams to Begin Frame Session</p>
         </header>
-
-        <div class="form-group">
-          <label for="playerCount">Number of Contestants (Max 6)</label>
-          <div class="select-wrapper">
-            <select id="playerCount" onchange="app.generatePlayerInputRows()">
-              <option value="2">2 Players</option>
-              <option value="3">3 Players</option>
-              <option value="4">4 Players</option>
-              <option value="5">5 Players</option>
-              <option value="6">6 Players</option>
-            </select>
-          </div>
-        </div>
 
         <div class="form-group">
           <label for="redCount">Starting Reds Pack</label>
@@ -40,14 +25,59 @@
           </div>
         </div>
 
-        <div id="namesContainer" class="names-list"></div>
+        <div
+          class="team-setup-grid"
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+          "
+        >
+          <div class="team-block">
+            <label style="color: #38bdf8">Team A (Strikers)</label>
+            <input
+              type="text"
+              id="tA_p1"
+              value="Team A - Player 1"
+              class="input-text"
+              style="margin-bottom: 10px"
+              maxlength="20"
+            />
+            <input
+              type="text"
+              id="tA_p2"
+              value="Team A - Player 2"
+              class="input-text"
+              maxlength="20"
+            />
+          </div>
+          <div class="team-block">
+            <label style="color: #f59e0b">Team B (Strikers)</label>
+            <input
+              type="text"
+              id="tB_p1"
+              value="Team B - Player 1"
+              class="input-text"
+              style="margin-bottom: 10px"
+              maxlength="20"
+            />
+            <input
+              type="text"
+              id="tB_p2"
+              value="Team B - Player 2"
+              class="input-text"
+              maxlength="20"
+            />
+          </div>
+        </div>
 
         <button
           class="btn btn-action btn-success"
-          style="width: 100%; margin-top: 10px"
+          style="width: 100%"
           onclick="app.startMatch()"
         >
-          Start Match
+          Start 2vs2 Match
         </button>
 
         <footer class="panel footer-panel">
@@ -84,7 +114,7 @@
 
         <section class="panel target-control-panel text-center">
           <div class="ticker-label target-header" id="lblTargetPhase">
-            Target: RED
+            Target Phase: RED
           </div>
           <div class="ball-flex">
             <button class="ball-btn ball-1" onclick="app.potBall(1)" id="b1">
@@ -123,34 +153,68 @@
 
           <div class="foul-control-wrapper">
             <div class="ticker-label foul-heading">
-              Foul Penalty Options
-              <span class="foul-subheading"
-                >(Deducted from active, added to opponents)</span
-              >
+              Foul Assignment Control Panel
             </div>
+
+            <div class="form-group" style="margin-bottom: 12px">
+              <label
+                for="foulAttributionSelect"
+                style="font-size: 0.7rem; color: #cbd5e1"
+                >Who committed the infraction?</label
+              >
+              <div class="select-wrapper">
+                <select id="foulAttributionSelect"></select>
+              </div>
+            </div>
+
             <div class="foul-strategy-row">
               <button
                 class="strategy-btn selected"
                 id="btnFoulPass"
                 onclick="app.setFoulStrategy('pass')"
               >
-                PASS TURN TO NEXT
+                PASS TURN
               </button>
               <button
                 class="strategy-btn"
                 id="btnFoulStay"
                 onclick="app.setFoulStrategy('stay')"
               >
-                STAY ON TURN (PLAY AGAIN)
+                FORCE RE-PLAY
               </button>
             </div>
             <div class="foul-grid">
-              <button class="btn btn-foul" onclick="app.foul(4)">+4 Pts</button>
-              <button class="btn btn-foul" onclick="app.foul(5)">+5 Pts</button>
-              <button class="btn btn-foul" onclick="app.foul(6)">+6 Pts</button>
-              <button class="btn btn-foul" onclick="app.foul(7)">+7 Pts</button>
+              <button class="btn btn-foul" onclick="app.foul(4)">-4 Pts</button>
+              <button class="btn btn-foul" onclick="app.foul(5)">-5 Pts</button>
+              <button class="btn btn-foul" onclick="app.foul(6)">-6 Pts</button>
+              <button class="btn btn-foul" onclick="app.foul(7)">-7 Pts</button>
             </div>
           </div>
+        </section>
+
+        <section
+          class="panel text-center"
+          id="exportControlPanel"
+          style="border-color: rgba(56, 189, 248, 0.2)"
+        >
+          <div
+            class="ticker-label"
+            style="color: var(--system-blue); margin-bottom: 10px"
+          >
+            End-Game Analysis
+          </div>
+          <button
+            class="btn btn-success"
+            style="
+              width: 100%;
+              background: rgba(56, 189, 248, 0.15);
+              border-color: var(--system-blue);
+              color: #fff;
+            "
+            onclick="app.downloadMatchReport()"
+          >
+            📥 Download Frame Performance Report (.TXT)
+          </button>
         </section>
 
         <section class="panel log-stream-panel">
@@ -168,8 +232,7 @@
       </div>
     </div>
 
-    <div class="toast" id="toast">Rule Infraction Detected!</div>
-
+    <div class="toast" id="toast">Rule Infraction Tracked!</div>
     <script src="main.js"></script>
   </body>
 </html>

@@ -1,106 +1,158 @@
-class SimpleSnookerApp {
+/**
+ * Snooker 2vs2 Team Performance Tracker Engine
+ * Custom Variant: Foul penalties deduct only from the active team/player.
+ */
+
+class TeamSnookerApp {
   constructor() {
+    this.teams = [];
     this.players = [];
-    this.activeIndex = 0;
+    this.activeTeamIndex = 0;
+    this.teamStrikerIndex = [0, 0]; // Index inside team arrays [0 or 1]
     this.currentBreak = 0;
     this.redsLeft = 15;
     this.startingReds = 15;
-    this.phase = "RED"; // 'RED', 'COLOR', 'CLEARANCE'
+    this.phase = "RED";
     this.clearanceOrder = [2, 3, 4, 5, 6, 7];
-    this.history = [];
     this.undoStack = [];
-    this.foulStrategy = "pass"; // 'pass' or 'stay'
+    this.foulStrategy = "pass";
+    this.history = [];
+    this.matchStartTime = null;
   }
 
   init() {
-    this.generatePlayerInputRows();
-  }
-
-  generatePlayerInputRows() {
-    const count = parseInt(document.getElementById("playerCount").value);
-    const container = document.getElementById("namesContainer");
-    container.innerHTML = "";
-
-    for (let i = 1; i <= count; i++) {
-      container.innerHTML += `
-        <div class="form-group">
-          <label>Player ${i} Name</label>
-          <input type="text" id="pName${i}" value="Player ${i}" maxlength="20">
-        </div>
-      `;
-    }
+    // Structural hooks are mounted from HTML forms directly
   }
 
   startMatch() {
-    const count = parseInt(document.getElementById("playerCount").value);
-    this.redsLeft = parseInt(document.getElementById("redCount").value);
+    this.redsLeft = parseInt(document.getElementById("redCount").value, 10);
     this.startingReds = this.redsLeft;
-    this.players = [];
+    this.matchStartTime = new Date();
 
-    for (let i = 1; i <= count; i++) {
-      const nameInput = document.getElementById(`pName${i}`);
-      this.players.push({
-        name: nameInput.value.trim() || `Player ${i}`,
-        score: 0,
+    const ta1 = document.getElementById("tA_p1").value.trim() || "Team A - P1";
+    const ta2 = document.getElementById("tA_p2").value.trim() || "Team A - P2";
+    const tb1 = document.getElementById("tB_p1").value.trim() || "Team B - P1";
+    const tb2 = document.getElementById("tB_p2").value.trim() || "Team B - P2";
+
+    this.teams = [
+      { name: "Team A", score: 0, players: [ta1, ta2] },
+      { name: "Team B", score: 0, players: [tb1, tb2] },
+    ];
+
+    this.players = [
+      {
+        id: "ta1",
+        name: ta1,
+        team: "Team A",
+        scoreContributed: 0,
+        foulsCommitted: 0,
+        pointsLost: 0,
         hiBreak: 0,
-      });
-    }
+        ballsPotted: 0,
+      },
+      {
+        id: "ta2",
+        name: ta2,
+        team: "Team A",
+        scoreContributed: 0,
+        foulsCommitted: 0,
+        pointsLost: 0,
+        hiBreak: 0,
+        ballsPotted: 0,
+      },
+      {
+        id: "tb1",
+        name: tb1,
+        team: "Team B",
+        scoreContributed: 0,
+        foulsCommitted: 0,
+        pointsLost: 0,
+        hiBreak: 0,
+        ballsPotted: 0,
+      },
+      {
+        id: "tb2",
+        name: tb2,
+        team: "Team B",
+        scoreContributed: 0,
+        foulsCommitted: 0,
+        pointsLost: 0,
+        hiBreak: 0,
+        ballsPotted: 0,
+      },
+    ];
 
-    this.activeIndex = 0;
+    this.activeTeamIndex = 0;
+    this.teamStrikerIndex = [0, 0];
     this.currentBreak = 0;
-    this.phase = "RED";
+    this.phase = this.redsLeft > 0 ? "RED" : "CLEARANCE";
     this.clearanceOrder = [2, 3, 4, 5, 6, 7];
-    this.history = [];
     this.undoStack = [];
     this.foulStrategy = "pass";
+    this.history = [];
 
     document.getElementById("setupScreen").classList.add("hidden");
     document.getElementById("matchScreen").classList.remove("hidden");
 
-    this.log("Match initialised", "system", "START");
+    this.log("2vs2 Match started", "system", "START");
+    this.populateFoulAttributionDropdown();
     this.evaluateRulesState();
     this.render();
   }
 
-  exitToSetup() {
-    if (confirm("Abandon tracking session and return to registration?")) {
-      document.getElementById("matchScreen").classList.add("hidden");
-      document.getElementById("setupScreen").classList.remove("hidden");
-    }
+  getActivePlayer() {
+    const activeTeam = this.teams[this.activeTeamIndex];
+    const pName =
+      activeTeam.players[this.teamStrikerIndex[this.activeTeamIndex]];
+    return this.players.find((p) => p.name === pName);
+  }
+
+  populateFoulAttributionDropdown() {
+    const dropdown = document.getElementById("foulAttributionSelect");
+    dropdown.innerHTML = "";
+    this.players.forEach((p, idx) => {
+      dropdown.innerHTML += `<option value="${idx}">${p.team} - ${p.name}</option>`;
+    });
   }
 
   saveSnapshot() {
     const snapshot = {
+      teams: JSON.parse(JSON.stringify(this.teams)),
       players: JSON.parse(JSON.stringify(this.players)),
-      activeIndex: this.activeIndex,
+      activeTeamIndex: this.activeTeamIndex,
+      teamStrikerIndex: [...this.teamStrikerIndex],
       currentBreak: this.currentBreak,
       redsLeft: this.redsLeft,
       phase: this.phase,
       clearanceOrder: [...this.clearanceOrder],
-      history: JSON.parse(JSON.stringify(this.history)),
       foulStrategy: this.foulStrategy,
+      history: JSON.parse(JSON.stringify(this.history)),
     };
     this.undoStack.push(snapshot);
-    if (this.undoStack.length > 30) this.undoStack.shift();
+    if (this.undoStack.length > 40) this.undoStack.shift();
   }
 
   undo() {
     if (this.undoStack.length === 0) {
-      this.triggerToast("No actions left on stack to undo.");
+      this.triggerToast("No metrics left on stack to undo.");
       return;
     }
-    const previous = this.undoStack.pop();
-    this.players = previous.players;
-    this.activeIndex = previous.activeIndex;
-    this.currentBreak = previous.currentBreak;
-    this.redsLeft = previous.redsLeft;
-    this.phase = previous.phase;
-    this.clearanceOrder = previous.clearanceOrder;
-    this.history = previous.history;
-    this.foulStrategy = previous.foulStrategy || "pass";
+    const prev = this.undoStack.pop();
+    this.teams = prev.teams;
+    this.players = prev.players;
+    this.activeTeamIndex = prev.activeTeamIndex;
+    this.teamStrikerIndex = prev.teamStrikerIndex;
+    this.currentBreak = prev.currentBreak;
+    this.redsLeft = prev.redsLeft;
+    this.phase = prev.phase;
+    this.clearanceOrder = prev.clearanceOrder;
+    this.foulStrategy = prev.foulStrategy;
+    this.history = prev.history;
 
+    this.setFoulStrategy(this.foulStrategy);
     this.evaluateRulesState();
     this.render();
+    this.triggerToast("Move Undone");
   }
 
   setFoulStrategy(strategy) {
@@ -114,29 +166,27 @@ class SimpleSnookerApp {
   }
 
   potBall(val) {
-    if (this.phase === "RED" && val !== 1) {
-      this.triggerToast("Rule Error: Target must be a RED ball.");
-      return;
-    }
-    if (this.phase === "COLOR" && val === 1) {
-      this.triggerToast("Rule Error: Target must be a COLOR ball.");
-      return;
-    }
-    if (this.phase === "CLEARANCE" && val !== this.clearanceOrder[0]) {
-      this.triggerToast(
-        "Rule Error: Colors must be cleared in order sequence.",
-      );
-      return;
-    }
+    if (this.phase === "RED" && val !== 1)
+      return this.triggerToast("Target must be RED.");
+    if (this.phase === "COLOR" && val === 1)
+      return this.triggerToast("Target must be COLOR.");
+    if (this.phase === "CLEARANCE" && val !== this.clearanceOrder[0])
+      return this.triggerToast("Wrong clearance order.");
 
     this.saveSnapshot();
-    const active = this.players[this.activeIndex];
+    const activeTeam = this.teams[this.activeTeamIndex];
+    const activePlayer = this.getActivePlayer();
 
-    active.score += val;
+    activeTeam.score += val;
+    activePlayer.scoreContributed += val;
+    activePlayer.ballsPotted += 1;
     this.currentBreak += val;
-    if (this.currentBreak > active.hiBreak) active.hiBreak = this.currentBreak;
 
-    const mappedNames = {
+    if (this.currentBreak > activePlayer.hiBreak) {
+      activePlayer.hiBreak = this.currentBreak;
+    }
+
+    const ballNames = {
       1: "Red",
       2: "Yellow",
       3: "Green",
@@ -145,7 +195,11 @@ class SimpleSnookerApp {
       6: "Pink",
       7: "Black",
     };
-    this.log(`${active.name} potted ${mappedNames[val]}`, "pot", `+${val}`);
+    this.log(
+      `${activePlayer.name} (${activeTeam.name}) potted ${ballNames[val]}`,
+      "pot",
+      `+${val}`,
+    );
 
     if (this.phase === "RED") {
       this.redsLeft--;
@@ -162,9 +216,9 @@ class SimpleSnookerApp {
 
   endTurn() {
     this.saveSnapshot();
-    const active = this.players[this.activeIndex];
+    const activePlayer = this.getActivePlayer();
     this.log(
-      `${active.name} break ended`,
+      `${activePlayer.name} break ended`,
       "turn",
       `Break: ${this.currentBreak}`,
     );
@@ -174,7 +228,7 @@ class SimpleSnookerApp {
     }
 
     this.currentBreak = 0;
-    this.activeIndex = (this.activeIndex + 1) % this.players.length;
+    this.activeTeamIndex = this.activeTeamIndex === 0 ? 1 : 0;
 
     this.evaluateRulesState();
     this.render();
@@ -182,23 +236,23 @@ class SimpleSnookerApp {
 
   foul(penaltyValue) {
     this.saveSnapshot();
-    const active = this.players[this.activeIndex];
 
-    // Deduct points from the active player who committed the foul
-    active.score -= penaltyValue;
-    if (active.score < 0) active.score = 0;
+    const selectIdx = parseInt(
+      document.getElementById("foulAttributionSelect").value,
+      10,
+    );
+    const targetFouler = this.players[selectIdx];
+    const foulingTeam = this.teams.find((t) => t.name === targetFouler.team);
 
-    // Add points to all non-active players (opponents)
-    this.players.forEach((player, idx) => {
-      if (idx !== this.activeIndex) {
-        player.score += penaltyValue;
-      }
-    });
+    // Points deduct directly from fouling team and support negative states
+    foulingTeam.score -= penaltyValue;
+    targetFouler.foulsCommitted += 1;
+    targetFouler.pointsLost += penaltyValue;
 
     this.log(
-      `${active.name} foul: -${penaltyValue} to self, +${penaltyValue} to Opp`,
+      `Foul by ${targetFouler.name} (${foulingTeam.name}): -${penaltyValue} pts. Opponents clear.`,
       "foul",
-      `Foul: ${penaltyValue}`,
+      `Foul: -${penaltyValue}`,
     );
 
     if (this.phase === "COLOR") {
@@ -208,9 +262,15 @@ class SimpleSnookerApp {
     this.currentBreak = 0;
 
     if (this.foulStrategy === "pass") {
-      this.activeIndex = (this.activeIndex + 1) % this.players.length;
+      const previousTeamIndex = this.activeTeamIndex;
+      this.activeTeamIndex = this.activeTeamIndex === 0 ? 1 : 0;
+      this.teamStrikerIndex[previousTeamIndex] =
+        (this.teamStrikerIndex[previousTeamIndex] + 1) % 2;
     } else {
-      this.log(`Opponent elected to let ${active.name} play again`, "system");
+      this.log(
+        `Opponent forced ${targetFouler.name} team to play out of position again`,
+        "system",
+      );
     }
 
     this.evaluateRulesState();
@@ -218,29 +278,34 @@ class SimpleSnookerApp {
   }
 
   evaluateRulesState() {
-    let totalPointsRemaining = 0;
+    let remaining = 0;
     if (this.redsLeft > 0) {
-      totalPointsRemaining += this.redsLeft * 8 + 27;
-      if (this.phase === "COLOR") totalPointsRemaining += 7;
+      remaining += this.redsLeft * 8 + 27;
+      if (this.phase === "COLOR") remaining += 7;
     } else {
-      this.clearanceOrder.forEach((c) => (totalPointsRemaining += c));
-      if (this.phase === "COLOR") totalPointsRemaining += 7;
+      this.clearanceOrder.forEach((c) => (remaining += c));
     }
 
-    document.getElementById("lblRemaining").innerText = totalPointsRemaining;
+    document.getElementById("lblRemaining").innerText = remaining;
+
+    const currentActive = this.getActivePlayer();
+    const dropdown = document.getElementById("foulAttributionSelect");
+    const activeMatchIdx = this.players.findIndex(
+      (p) => p.name === currentActive.name,
+    );
+    if (dropdown && activeMatchIdx !== -1) {
+      dropdown.value = activeMatchIdx;
+    }
 
     const targetLabel = document.getElementById("lblTargetPhase");
-
     if (this.phase === "RED") {
       targetLabel.innerText = "Target Phase: RED";
-      targetLabel.className = "ticker-label target-header";
       targetLabel.style.color = "var(--ball-red)";
     } else if (this.phase === "COLOR") {
       targetLabel.innerText = "Target Phase: ANY COLOR";
-      targetLabel.className = "ticker-label target-header";
       targetLabel.style.color = "var(--gold)";
     } else {
-      const mappedNames = {
+      const namesMap = {
         2: "YELLOW",
         3: "GREEN",
         4: "BROWN",
@@ -248,92 +313,149 @@ class SimpleSnookerApp {
         6: "PINK",
         7: "BLACK",
       };
-      const upNextVal = this.clearanceOrder[0] || 7;
-      targetLabel.innerText = `Target Phase Sequence: ${mappedNames[upNextVal]}`;
-      targetLabel.className = "ticker-label target-header";
-      targetLabel.style.color = "var(--text-main)";
+      targetLabel.innerText =
+        this.clearanceOrder.length > 0
+          ? `Sequence Clear: ${namesMap[this.clearanceOrder[0]]}`
+          : "FRAME COMPLETED";
     }
 
     for (let i = 1; i <= 7; i++) {
       const btn = document.getElementById(`b${i}`);
-      if (this.phase === "RED") btn.disabled = i !== 1;
-      else if (this.phase === "COLOR") btn.disabled = i === 1;
-      else if (this.phase === "CLEARANCE")
-        btn.disabled = i !== this.clearanceOrder[0];
+      if (!btn) continue;
+      let dis = true;
+      if (this.phase === "RED" && i === 1) dis = false;
+      else if (this.phase === "COLOR" && i !== 1) dis = false;
+      else if (this.phase === "CLEARANCE" && i === this.clearanceOrder[0])
+        dis = false;
+      btn.disabled = dis;
     }
 
-    this.calculateSnookerStates(totalPointsRemaining);
+    this.calculateSnookerStates(remaining);
   }
 
   calculateSnookerStates(remaining) {
-    if (this.players.length === 0) return;
-
-    const sorted = [...this.players].sort((a, b) => b.score - a.score);
-    const highestScore = sorted[0].score;
-    const runnerUpScore = sorted[1] ? sorted[1].score : 0;
-    const active = this.players[this.activeIndex];
+    if (this.teams.length < 2) return;
+    const tA = this.teams[0];
+    const tB = this.teams[1];
     const calcLabel = document.getElementById("lblSnookerCalculator");
 
-    if (highestScore === runnerUpScore && remaining === 0) {
-      calcLabel.innerHTML = `<span>Tie Frame Situation! Re-spotted black needed.</span>`;
+    const margin = Math.abs(tA.score - tB.score);
+    const leader = tA.score > tB.score ? tA : tB;
+    const trailer = tA.score > tB.score ? tB : tA;
+
+    if (tA.score === tB.score) {
+      calcLabel.innerHTML = `<span>Scores level at <strong>${tA.score}</strong>. Layout is open.</span>`;
       return;
     }
 
-    if (active.score === highestScore) {
-      const margin = active.score - runnerUpScore;
-      if (margin > remaining) {
-        calcLabel.innerHTML = `<span>✨ ${active.name} secure clear lead. Frame Won!</span>`;
-      } else {
-        calcLabel.innerHTML = `<span>${active.name} is leading the layout by <strong>${margin}</strong> pts.</span>`;
-      }
+    if (margin > remaining) {
+      calcLabel.innerHTML = `<span>✨ ${leader.name} secures frame margin layout advantage (+${margin - remaining} safe).</span>`;
     } else {
-      const deficit = highestScore - active.score;
-      if (deficit > remaining) {
-        const snookersNeeded = Math.ceil((deficit - remaining) / 4);
-        calcLabel.innerHTML = `<span>⚠️ Snookers Required: ${active.name} needs <strong>${snookersNeeded}</strong> foul(s) (${deficit - remaining} pts behind capacity)</span>`;
-      } else {
-        calcLabel.innerHTML = `<span>${active.name} needs <strong>${deficit}</strong> pts to catch leader. Layout is live.</span>`;
-      }
+      calcLabel.innerHTML = `<span>${leader.name} leads ${trailer.name} by <strong>${margin}</strong> pts. ${remaining} on table.</span>`;
     }
   }
 
+  downloadMatchReport() {
+    const tA = this.teams[0];
+    const tB = this.teams[1];
+    const durationMins = Math.floor((new Date() - this.matchStartTime) / 60000);
+
+    let output = `==================================================\n`;
+    output += `       SNOOKER 2VS2 FRAME PERFORMANCE REPORT       \n`;
+    output += `==================================================\n`;
+    output += `Timestamp: ${new Date().toLocaleString()}\n`;
+    output += `Match Duration: ${durationMins} minutes\n`;
+    output += `Initial Configuration: ${this.startingReds} Reds Pack\n\n`;
+
+    output += `TEAM SCORE SUMMARY:\n`;
+    output += `--------------------------------------------------\n`;
+    output += `${tA.name}: ${tA.score} points total\n`;
+    output += `${tB.name}: ${tB.score} points total\n`;
+    const winner =
+      tA.score > tB.score
+        ? tA.name
+        : tA.score < tB.score
+          ? tB.name
+          : "Tie Split Frame";
+    output += `Current Verdict Winner: ${winner}\n\n`;
+
+    output += `PLAYER SPECIFIC METRICS ANALYSIS:\n`;
+    output += `--------------------------------------------------\n`;
+
+    this.players.forEach((p) => {
+      output += `• Striker: ${p.name} (${p.team})\n`;
+      output += `  - Total Points Contributed: ${p.scoreContributed} pts\n`;
+      output += `  - Successful Ball Pots: ${p.ballsPotted}\n`;
+      output += `  - Frame High Break Achievement: ${p.hiBreak} pts\n`;
+      output += `  - Violations/Fouls Triggered: ${p.foulsCommitted} times\n`;
+      output += `  - Direct Points Forfeited via Fouls: -${p.pointsLost} pts\n`;
+      const netEfficiency = p.scoreContributed - p.pointsLost;
+      output += `  - Frame Net Score Value (Pots - Fouls): ${netEfficiency} pts\n`;
+      output += `--------------------------------------------------\n`;
+    });
+
+    output += `LIVE ACTION FRAME LOG AUDIT:\n`;
+    output += `--------------------------------------------------\n`;
+    [...this.history].reverse().forEach((h, i) => {
+      output += `[Line ${String(i + 1).padStart(2, "0")}] [${h.time}] ${h.message}\n`;
+    });
+    output += `\n==================================================\n`;
+    output += `              End of Report File                  \n`;
+    output += `==================================================\n`;
+
+    const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `snooker_2vs2_report_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.triggerToast("Report compilation downloaded!");
+  }
+
   log(msg, type = "system", badgeText = "") {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], {
+    const timeStr = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-      hour12: true,
     });
-
     this.history.unshift({
       time: timeStr,
       message: msg,
       type: type,
       badge: badgeText,
     });
-
-    if (this.history.length > 30) this.history.pop();
   }
 
   triggerToast(msg) {
     const t = document.getElementById("toast");
     t.innerText = msg;
     t.classList.add("show");
-    setTimeout(() => t.classList.remove("show"), 2500);
+    setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  exitToSetup() {
+    if (confirm("Abandon tracking session? All metrics data will clear.")) {
+      document.getElementById("matchScreen").classList.add("hidden");
+      document.getElementById("setupScreen").classList.remove("hidden");
+    }
   }
 
   render() {
     const grid = document.getElementById("playersScoreboardGrid");
     grid.innerHTML = "";
 
-    this.players.forEach((p, idx) => {
-      const isActive = idx === this.activeIndex;
+    this.teams.forEach((team, tIdx) => {
+      const isTeamActive = tIdx === this.activeTeamIndex;
+      const runningStrikerName = team.players[this.teamStrikerIndex[tIdx]];
+
       grid.innerHTML += `
-        <div class="player-box ${isActive ? "active" : ""}" onclick="app.selectPlayerIndexDirectly(${idx})">
-          <div class="p-name">${p.name}</div>
-          <div class="p-score">${p.score}</div>
-          <div class="p-meta">Hi-Break: ${p.hiBreak}</div>
+        <div class="player-card ${isTeamActive ? "active" : ""}">
+          <div class="p-name" style="font-weight:800; text-transform:uppercase; color:${tIdx === 0 ? "#38bdf8" : "#f59e0b"}">${team.name}</div>
+          <div class="player-score">${team.score}</div>
+          <div class="p-meta" style="font-size:0.75rem; color:#cbd5e1;">Striker: <strong>${runningStrikerName}</strong></div>
         </div>
       `;
     });
@@ -342,62 +464,36 @@ class SimpleSnookerApp {
 
     const assetPool = document.getElementById("tableAssetPool");
     assetPool.innerHTML = "";
-
-    // Render Reds
     for (let i = 0; i < this.startingReds; i++) {
-      const isDimmed = i >= this.redsLeft;
-      assetPool.innerHTML += `<div class="v-ball ${isDimmed ? "dimmed" : ""}" style="background: var(--ball-red);"></div>`;
+      assetPool.innerHTML += `<div class="asset-ball asset-red" style="opacity: ${i >= this.redsLeft ? "0.15" : "1"}"></div>`;
     }
 
-    // Render Colors using the new radial gradients from CSS
-    const colorsDef = [
-      { v: 2, c: "var(--ball-yellow)" },
-      { v: 3, c: "var(--ball-green)" },
-      { v: 4, c: "var(--ball-brown)" },
-      { v: 5, c: "var(--ball-blue)" },
-      { v: 6, c: "var(--ball-pink)" },
-      { v: 7, c: "var(--ball-black)" },
+    const colorMap = [
+      { v: 2, c: "yellow" },
+      { v: 3, c: "green" },
+      { v: 4, c: "brown" },
+      { v: 5, c: "blue" },
+      { v: 6, c: "pink" },
+      { v: 7, c: "black" },
     ];
-
-    colorsDef.forEach((color) => {
-      let isDimmed = false;
-      if (
-        this.phase === "CLEARANCE" &&
-        !this.clearanceOrder.includes(color.v)
-      ) {
-        isDimmed = true;
-      }
-      assetPool.innerHTML += `<div class="v-ball ${isDimmed ? "dimmed" : ""}" style="background: ${color.c}"></div>`;
+    colorMap.forEach((color) => {
+      const isCleared =
+        this.phase === "CLEARANCE" && !this.clearanceOrder.includes(color.v);
+      assetPool.innerHTML += `<div class="asset-ball asset-${color.c}" style="opacity: ${isCleared ? "0.15" : "1"}"></div>`;
     });
 
     const feed = document.getElementById("historyFeed");
     feed.innerHTML = "";
-
     this.history.forEach((item) => {
       feed.innerHTML += `
-        <div class="history-item type-${item.type}">
-          <div class="log-left">
-            <span class="time-tag">${item.time}</span>
-            <span class="log-msg">${item.message}</span>
-          </div>
-          ${item.badge ? `<span class="badge">${item.badge}</span>` : ""}
+        <div class="log-item type-${item.type}">
+          <span class="log-time">[${item.time}]</span>
+          <strong>${item.badge ? `${item.badge} ` : ""}</strong> ${item.message}
         </div>
       `;
     });
   }
-
-  selectPlayerIndexDirectly(idx) {
-    if (this.currentBreak > 0) {
-      this.triggerToast(
-        "Cannot swap current turn active players mid-break series.",
-      );
-      return;
-    }
-    this.activeIndex = idx;
-    this.evaluateRulesState();
-    this.render();
-  }
 }
 
-const app = new SimpleSnookerApp();
+const app = new TeamSnookerApp();
 window.addEventListener("DOMContentLoaded", () => app.init());
